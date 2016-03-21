@@ -308,7 +308,7 @@ func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 		if f == HTMLFILTER { // Implies GET Request Method with HTML Filter
 			// Only process response responses with "Content-Type: text/html;charset=UTF-8"
 			// As Gato seems to include links to images in a tags.
-			content := req.Header.Get("Content-Type")
+			content := res.Header.Get("Content-Type")
 			if strings.HasPrefix(content, "text/html") {
 				pis, err = ls.FilterHtml(res.Body)
 			} else {
