@@ -29,3 +29,16 @@ echo 'http://gato-staging-testingsite.its.txstate.edu' |
 
 **stuc.py python script:**
 The stuc.py python script converts thrawler log output to a tab delimited version with only source, tag, url and status code fields.
+
+**Install python3 on RHEL6**
+```
+wget https://www.python.org/ftp/python/3.5.1/Python-3.5.1.tar.xz
+tar xf Python-3.*
+cd Python-3.*
+./configure
+make
+# Install as python3.* so don't overwrite default python executable as yum needs python to be 2.x on RHEL6
+make altinstall
+mv /usr/local/bin/python3.5 /usr/bin/python3.5
+ln -s python3.5 /usr/bin/python3
+```
