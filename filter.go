@@ -596,13 +596,11 @@ func condensePath(path string) string {
 	}
 	ps := strings.Split(path, "/")
 	for _, v := range ps {
-		if v != ".." && v != "" {
+		if v != ".." && v != "." && v != "" {
 			p = append(p, v)
-		} else if v == ".." {
-			if len(p) != 0 {
-				p = p[:len(p)-1]
-			}
-		} // else v == ""
+		} else if v == ".." && len(p) != 0 {
+			p = p[:len(p)-1]
+		} // treat rest of cases as v == ""
 	}
 	if len(p) == 0 {
 		return "/"
