@@ -1,11 +1,14 @@
 # thrawler
 A threaded crawler to help with checking Gato CMS link generation before and after updates
 
+**Disclaimer:**
+Please do not point this application to other peoples production sites and take care if you use it on your own sites. This crawler has been designed to access parts of our staging sites as quickly as possible, and is thus not throttled. Nor does this crawler take into consideration robot.txt guidelines, as it needs to verify all of our staging pages regardless of these restrictions. This is not good behavior for a general use crawler, and we cannot be held responsible if used inappropriately.
+
 **Example of how to run thrawler**
-The following command will tell thrawler to start scanning the gato-staging-testingsite.its.txstate.edu site. Eight goroutines will be utilized, i.e. no more than 8 requests will be made at one time to the site. Requests will all be sent to the gato-public-st.tr.txstate.edu loadbalancer. More than one header may be added, but in this case only the Via header is added to tell Gato to treat the request as if it is coming from the cache boxes. The logs will be piped through the stuc.py script to convert the output into a tab delmited one with only source, tag, url, and status code fields. The the output is sorted and saved to the links text. This allows us to save all the links found and compare before and after updates.
+The following command will tell thrawler to start scanning the gato-staging-testingsite and gato-staging-mainsite2012 sites on gato. Eight goroutines will be utilized, i.e. no more than 8 requests will be made at one time to the site. Requests will all be sent to the gato-public-st.tr.txstate.edu loadbalancer. More than one header may be added, but in this case only the Via header is utilized to tell Gato to treat the request as if it is coming from the cache boxes. The logs will be piped through the stuc.py script to convert the stream into tab delmited output with only source, tag, url, and status code fields. This output is then sorted and saved to the links.txt file. This lets us save all the links found in a way that allows us to compare before and after Gato updates no matter the order in which the pages where originally scanned.
 
 ```
-echo 'http://gato-staging-testingsite.its.txstate.edu' |
+echo -e 'http://gato-staging-testingsite.its.txstate.edu\nhttp://gato-staging-mainsite2012.its.txstate.edu' |
   ./thrawler --conf=configs/staging-testingsite --threads=8 --proxy='http://gato-public-st.tr.txstate.edu' +header='Via: Proxy-HistoryCache/1.8.5' |
   ./stuc.py |
   sort > links.txt

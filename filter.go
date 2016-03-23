@@ -29,7 +29,7 @@ type LinkContent struct {
 }
 
 // NOTE: Use of reCSS regular expresson is required to
-//   filter out comments; so as to not inadvertenly grab
+//   filter out comments; so as to not inadvertently grab
 //   commented out urls.
 // WARN: Use of reCSS regexp will not be able to determine
 //   bad css. e.g. unclosed comments. Will require a
@@ -181,7 +181,7 @@ type Links struct {
 // and should be filtered for links and
 // considered a failure if they do not have
 // "content-type: text/html" header. All other
-// links should be clasified as an ExistOnlyLink
+// links should be classified as an ExistOnlyLink
 type HtmlFilterLink struct {
 	LinkInfo
 	Envs
@@ -288,7 +288,6 @@ func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 		defer res.Body.Close()
 	}
 
-	// TODO: check mime
 	ls.envs[i][ls.String()] = res.StatusCode
 	if err != nil || res.StatusCode != 200 {
 		// could be redirect error ErrRedirectTtlExceeded
@@ -461,12 +460,6 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 //     text-decoration:none;
 //     background: transparent url("http://gato-docs.its.txstate.edu/xiphophorus-genetic-stock-center/images/bg/logo-b.png") top center no-repeat fixed;
 //   }
-// parseCSS may be used to scrape for links from style tags and attributes with CSS content for matching url("...") patterns:
-// <a
-//   href="/mjdf38i3tv0b56vz/xiphophorus-genetic-stock-center/about.html"
-//   class="ddmenu-menubaritem"
-//   style="background: url(http://gato-staging-mainsite2012.its.txstate.edu/cache4fd6ce1ad313e4f1182370ce8ddb9b97/imagehandler/khanmenuactive/AboutUs.gif?text=About%20Us)"
-// >...</a>
 func (ls *Links) FilterCss(body io.Reader) ([]ProcInfo, error) {
 	var procs []ProcInfo
 	c, err := ioutil.ReadAll(body)
@@ -485,6 +478,12 @@ func (ls *Links) FilterCss(body io.Reader) ([]ProcInfo, error) {
 	return procs, nil
 }
 
+// parseCSS may be used to scrape for links from style tags and attributes with CSS content for matching url("...") patterns:
+// <a
+//   href="/mjdf38i3tv0b56vz/xiphophorus-genetic-stock-center/about.html"
+//   class="ddmenu-menubaritem"
+//   style="background: url(http://gato-staging-mainsite2012.its.txstate.edu/cache4fd6ce1ad313e4f1182370ce8ddb9b97/imagehandler/khanmenuactive/AboutUs.gif?text=About%20Us)"
+// >...</a>
 func parseCss(body string) (links []string) {
 	csss := reCSS.FindAllStringSubmatch(body, -1)
 	for _, css := range csss {
@@ -502,24 +501,14 @@ func parseCss(body string) (links []string) {
 // NOTE: Can add configuration options for Generating canonical URLs, by
 // encapulating the Canonicalization function; This allows for this
 // functionality to be expand upon and thus applied to specific sites
-// as well as being tailored to their needs.
+// by tailoring the resulting fuction to their needs.
 type Canon func(LinkInfo, string) (LinkInfo, error)
 
 // ---- URL Canonicalization
 // Requirements for Generating canonical URLs:
-// 1) Convert alias imagehandler host names to gato urls:
-// 2) Convert alias vhosts host names to gato urls:
-//   EX: From vhost: http://www.xiphophorus.txstate.edu/ to
-//   staging: http://gato-public-st.tr.txstate.edu/xiphophorus-genetic-stock-center
-//     with headers --header 'Host: www.xiphophorus.txstate.edu' --header 'Via: Proxy-HistoryCache/1.8.5'
-//   or vice versa if crawling edits.
-//   EX: From hardcoded alkek.its.txstate.edu/... links to
-//   staging:  staging.gato-edit-st.tr.txstate.edu/alkek/...
-//   e.g. convert vhost names back to staging name.
-//   EX: convert imagehandler ... links to
-//   staging: gato links
-// 3) Condense path by adjusting ../../ relative positioning from left to right
-// 4) Drop unwanted URLs
+// 1) Condense path by adjusting ../../ relative positioning from left to right
+// 2) Drop unwanted URLs
+// 3) Add proper protocol
 func canonicalize(source LinkInfo, link string) (LinkInfo, error) {
 	var linkinfo LinkInfo
 	link = strings.TrimSpace(link)
@@ -598,6 +587,7 @@ func splitUrl(link string) (LinkInfo, error) {
 
 // condensePath removes double slashes "//" and
 // normalizes the path by removing "<previous path>/.." sections
+// TODO: Should also remove "./" same path sections
 func condensePath(path string) string {
 	var p []string
 	var s string

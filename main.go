@@ -47,9 +47,9 @@ func init() {
 	flag.IntVar(&threads, "threads", 20, "Number of threads used to crawl site.")
 	flag.StringVar(&proxy, "proxy", "", "Proxy to send traffic to. Generally a load balancer.")
 	flag.Parse()
-	// Handle headers as multi arguments so that we
+	// Handle headers separately as multi arguments so that we
 	// can allow for multiple headers:
-	// --header="h1:v1" --header="h2:v2" ...
+	// +header="h1:v1" +header="h2:v2" ...
 	if flag.NArg() > 0 {
 		for _, f := range flag.Args() {
 			if strings.HasPrefix(f, "+header=") && len(f) > 9 {
@@ -67,7 +67,7 @@ func init() {
 	}
 	// http://stackoverflow.com/questions/14661511/setting-up-proxy-for-http-client
 	if proxy != "" {
-		// proxy = "http://gato-public.its.txstate.edu"
+		// EX: proxy = "http://gato-public.its.txstate.edu" or "http://localhost:8080"
 		os.Setenv("HTTP_PROXY", proxy)
 	}
 	wd, _ = os.Getwd()
@@ -130,19 +130,15 @@ func NewConfig(config io.Reader) (Config, error) {
 func NewCanonicalize(config Config) (Canon, error) {
 	return func(source LinkInfo, link string) (LinkInfo, error) {
 		// Normalize Image Handler links
-		//	test_link1 := link
 		for _, matcher := range config.matchers {
 			link = matcher.find.ReplaceAllString(link, matcher.replace)
 		}
 		// Return error if does not match base domain to be tested
 		// Canonicalize
-		//	test_link2 := link
 		li, err := canonicalize(source, link)
 		if err != nil {
-			//		fmt.Printf("src='%s' link1='%s' link2='%s'\n", source.String(), test_link1, test_link2)
 			return LinkInfo{}, err
 		}
-		//	fmt.Printf("src='%s' link1='%s' link2='%s' li='%s'\n", source.String(), test_link1, test_link2, li.String())
 		if !config.base.MatchString(li.String()) {
 			return LinkInfo{}, ErrNotBaseDomain{url: li.String()}
 		}
@@ -150,12 +146,10 @@ func NewCanonicalize(config Config) (Canon, error) {
 	}, nil
 }
 
-// TODO: import site list via standard input
 func main() {
 	if !strings.HasPrefix(configfile, "/") {
 		configfile = wd + "/" + configfile
 	}
-	//fmt.Printf("reading from config file: %s\n", configfile)
 	f, err := os.Open(configfile)
 	if err != nil {
 		panic("Error opening '" + configfile + "' configuration file: " + err.Error())
@@ -174,7 +168,7 @@ func main() {
 	mainlog.SetHandler(
 		log.LvlFilterHandler(
 			log.LvlDebug,
-			log.StreamHandler(os.Stdout, log.JsonFormat()))) //log.JsonFormat() //log.LogfmtFormat()
+			log.StreamHandler(os.Stdout, log.JsonFormat())))
 	var sites []string
 	in := bufio.NewScanner(os.Stdin)
 	for in.Scan() {
