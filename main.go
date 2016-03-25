@@ -129,16 +129,21 @@ func NewConfig(config io.Reader) (Config, error) {
 //}
 func NewCanonicalize(config Config) (Canon, error) {
 	return func(source LinkInfo, link string) (LinkInfo, error) {
-		// Normalize Image Handler links
-		for _, matcher := range config.matchers {
-			link = matcher.find.ReplaceAllString(link, matcher.replace)
-		}
-		// Return error if does not match base domain to be tested
 		// Canonicalize
 		li, err := canonicalize(source, link)
 		if err != nil {
 			return LinkInfo{}, err
 		}
+		// Normalize Image Handler links
+		link = li.GetUrl()
+		for _, matcher := range config.matchers {
+			link = matcher.find.ReplaceAllString(link, matcher.replace)
+		}
+		li, err = SplitUrl(li, link)
+		if err != nil {
+			return li, err
+		}
+		// Return error if does not match base domain to be crawled
 		if !config.base.MatchString(li.String()) {
 			return LinkInfo{}, ErrNotBaseDomain{url: li.String()}
 		}

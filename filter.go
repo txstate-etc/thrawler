@@ -151,6 +151,8 @@ type LinkInfo struct {
 	Query    string
 	Fragment string
 	Tag      string
+	Initial  string
+	FullUrl  string
 }
 
 // Remove Query and Fragments from url
@@ -159,6 +161,10 @@ func (li LinkInfo) String() string {
 		return li.Protocol + "://" + li.Host + li.Path
 	}
 	return ""
+}
+
+func (li LinkInfo) GetUrl() string {
+	return li.FullUrl
 }
 
 type Links struct {
@@ -251,13 +257,13 @@ func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 		method = "HEAD"
 	}
 	if stat, ok := ls.envs[i][ls.String()]; ok {
-		ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "path", ls.Path, "err", "", "code", stat, "type", method, "net", false)
+		ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", "", "code", stat, "type", method, "net", false)
 		return pis
 	}
 	req, err := http.NewRequest(method, ls.String(), nil)
 	if err != nil {
 		ls.envs[i][ls.String()] = 0
-		ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "path", ls.Path, "err", err.Error(), "code", 0, "type", method, "net", true)
+		ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", err.Error(), "code", 0, "type", method, "net", true)
 		return pis
 	}
 
@@ -293,15 +299,15 @@ func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 		// could be redirect error ErrRedirectTtlExceeded
 		// which loging should handle
 		if err != nil {
-			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "path", ls.Path, "err", err.Error(), "code", res.StatusCode, "type", method, "net", true)
+			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", err.Error(), "code", res.StatusCode, "type", method, "net", true)
 		} else {
-			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "path", ls.Path, "err", "", "code", res.StatusCode, "type", method, "net", true)
+			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", "", "code", res.StatusCode, "type", method, "net", true)
 		}
 		return pis
 	}
 
 	if f == EXISTFILTER { // Implies HEAD Request Method
-		ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "path", ls.Path, "err", "", "code", res.StatusCode, "type", method, "net", true)
+		ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", "", "code", res.StatusCode, "type", method, "net", true)
 	} else if f != SKIPFILTER {
 		var err error
 		if f == HTMLFILTER { // Implies GET Request Method with HTML Filter
@@ -322,9 +328,9 @@ func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 			pis, err = ls.FilterCss(res.Body)
 		}
 		if err != nil {
-			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "path", ls.Path, "err", err.Error(), "code", res.StatusCode, "type", method, "net", true)
+			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", err.Error(), "code", res.StatusCode, "type", method, "net", true)
 		} else {
-			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "path", ls.Path, "err", "", "code", res.StatusCode, "type", method, "net", true)
+			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", "", "code", res.StatusCode, "type", method, "net", true)
 		}
 	}
 	return pis
@@ -434,12 +440,12 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 				for _, lc := range list {
 					li, err := ls.canon(ls.LinkInfo, lc.Url)
 					if err != nil {
-						ls.log.Info("req", "src", ls.String(), "tag", lc.Tag, "url", lc.Url, "path", "", "err", err.Error(), "code", 0, "type", "", "net", false)
+						ls.log.Info("req", "src", ls.String(), "tag", lc.Tag, "url", lc.Url, "initial", lc.Url, "err", err.Error(), "code", 0, "type", "", "net", false)
 					} else {
 						li.Tag = lc.Tag
 						switch lc.Filter {
 						case SKIPFILTER:
-							ls.log.Info("req", "src", ls.String(), "tag", lc.Tag, "url", li.String(), "path", li.Path, "err", "", "code", 0, "type", "SKIP", "net", false)
+							ls.log.Info("req", "src", ls.String(), "tag", lc.Tag, "url", li.String(), "initial", lc.Url, "err", "", "code", 0, "type", "SKIP", "net", false)
 						case EXISTFILTER:
 							procs = append(procs, ProcInfo(ExistOnlyLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
 						case HTMLFILTER:
@@ -512,6 +518,7 @@ type Canon func(LinkInfo, string) (LinkInfo, error)
 func canonicalize(source LinkInfo, link string) (LinkInfo, error) {
 	var linkinfo LinkInfo
 	link = strings.TrimSpace(link)
+	linkinfo.Initial = link
 	if link == "" {
 		// Skip empty links (link=="")
 		return linkinfo, ErrEmptyUrl{}
@@ -540,7 +547,7 @@ func canonicalize(source LinkInfo, link string) (LinkInfo, error) {
 			link = source.Protocol + "://" + source.Host + basePath(source.Path) + "/" + link
 		}
 	}
-	return splitUrl(link)
+	return SplitUrl(linkinfo, link)
 }
 
 // path such as /mjdf38i3tv0b56vz/.resources/gato-template-txstate2015/css/txstate2015.compiled.css
@@ -568,21 +575,19 @@ func basePath(p string) string {
 // If a section is not present then it will be represented by an empty string "".
 // If the url does not match the reSplitUrl regular expression,
 // we assume it is invalid and return a malformed url error.
-func splitUrl(link string) (LinkInfo, error) {
+func SplitUrl(linkinfo LinkInfo, link string) (LinkInfo, error) {
 	split := reSplitUrl.FindStringSubmatch(link)
 	if len(split) == 0 {
-		return LinkInfo{}, ErrMalformUrl{url: link}
+		return linkinfo, ErrMalformUrl{url: link}
 	}
 
-	li := LinkInfo{
-		Protocol: split[1],
-		Host:     split[2],
-		Path:     condensePath(split[3]),
-		Query:    split[4],
-		Fragment: split[5],
-	}
-
-	return li, nil
+	linkinfo.Protocol = split[1]
+	linkinfo.Host = split[2]
+	linkinfo.Path = condensePath(split[3])
+	linkinfo.Query = split[4]
+	linkinfo.Fragment = split[5]
+	linkinfo.FullUrl = link
+	return linkinfo, nil
 }
 
 // condensePath removes double slashes "//" and
