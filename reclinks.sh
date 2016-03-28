@@ -26,10 +26,14 @@ if [ $name == 'after' ]; then
   # Find missed transmogrifiers
   t=$'\t'; grep "$t[^$t]*mjdf38i3tv0b56vz" $name.txt > $name.miss.txt
 	if ! (diff -U 0 before.miss.txt after.miss.txt >links.miss.diff); then
+    echo '========== Missed Transmogrified Links =========='
+    grep -v '^@' links.miss.diff
     mv after.miss.txt before.miss.txt
     grep -v '^@' links.miss.diff | mail -s "$(hostname -f) missed transmogrifiers" "$emails"
   fi 
   if ! (diff -U 0 before.txt after.txt >links.diff); then
+    echo '========== Differing Links =========='
+    grep -v '^@' links.diff
     mv after.txt before.txt
     grep -v '^@' links.diff | mail -s "$(hostname -f) link diffs" "$emails"
   fi
