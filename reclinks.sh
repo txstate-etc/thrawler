@@ -11,7 +11,7 @@ fi
 # Need to remove cache busting hashes as
 # currently they differ between builds.
 echo 'http://gato-staging-testingsite.its.txstate.edu' |
-  ./thrawler --conf=configs/staging-testingsite --threads=8 --proxy='http://localhost' +header='Via: Proxy-HistoryCache/1.8.5' |
+  ./thrawler --conf=configs/gato-staging-testingsite.its.txstate.edu.conf --threads=8 --proxy='http://localhost' +header='Via: Proxy-HistoryCache/1.8.5' |
   tee $name.json |
   ./stuc.py |
   sed 's/magnoliaAssets\/cache[0-9a-z]\+\//magnoliaAssets\/cache...\//g; s/cache[0-9a-z]\+\/imagehandler\//cache...\/imagehandler\//g' |
