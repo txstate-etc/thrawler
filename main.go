@@ -36,6 +36,7 @@ func (e ErrConfigFile) Error() string {
 	return fmt.Sprintf("Config file issue with following line '%s'", e.line)
 }
 
+var crawl bool
 var configfile string
 var threads int
 var proxy string
@@ -43,6 +44,7 @@ var headers []Header
 var wd string
 
 func init() {
+	flag.BoolVar(&crawl, "crawl", true, "If false then only the intially supplied list of sites will be parsed for links. All generated links will only be validated to exist. If true then all generated links will also be parsed for links to be crawled recursively.")
 	flag.StringVar(&configfile, "conf", "config", "Path to configuration file used to help canonicalize gathered URLs, and to filter by base domain.")
 	flag.IntVar(&threads, "threads", 20, "Number of threads used to crawl site.")
 	flag.StringVar(&proxy, "proxy", "", "Proxy to send traffic to. Generally a load balancer.")
@@ -59,7 +61,6 @@ func init() {
 					h[1] = strings.TrimSpace(h[1])
 					if h[0] != "" && h[1] != "" {
 						headers = append(headers, Header{Name: h[0], Val: h[1]})
-						//					fmt.Printf("Headers added: '%s: %s'\n", h[0], h[1])
 					}
 				}
 			}
@@ -182,5 +183,5 @@ func main() {
 	if err := in.Err(); err != nil {
 		panic("Error reading site list from standard input:" + err.Error())
 	}
-	Run(mainlog, threads, StartHtmlFilterLinks(threads, headers, canon, sites))
+	Run(mainlog, threads, StartHtmlFilterLinks(threads, headers, canon, crawl, sites))
 }

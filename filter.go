@@ -125,14 +125,15 @@ type Envs struct {
 	envs    []Env
 	headers []Header
 	canon   Canon
+	crawl   bool
 }
 
-func StartHtmlFilterLinks(envn int, headers []Header, canon Canon, urls []string) (pis []ProcInfo) {
+func StartHtmlFilterLinks(envn int, headers []Header, canon Canon, crawl bool, urls []string) (pis []ProcInfo) {
 	es := make([]Env, envn)
 	for i := 0; i < envn; i++ {
 		es[i] = make(Env)
 	}
-	var envs = Envs{envs: es, headers: headers, canon: canon}
+	var envs = Envs{envs: es, headers: headers, canon: canon, crawl: crawl}
 	for _, url := range urls {
 		if reFullUrl.MatchString(url) {
 			li, err := canon(LinkInfo{}, url)
@@ -449,7 +450,11 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 						case EXISTFILTER:
 							procs = append(procs, ProcInfo(ExistOnlyLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
 						case HTMLFILTER:
-							procs = append(procs, ProcInfo(HtmlFilterLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
+							if ls.crawl {
+								procs = append(procs, ProcInfo(HtmlFilterLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
+							} else {
+								procs = append(procs, ProcInfo(ExistOnlyLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
+							}
 						case CSSFILTER:
 							procs = append(procs, ProcInfo(CssFilterLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
 						}
