@@ -29,14 +29,14 @@ curl --user "$magusr" -H 'Accept: application/json' 'http://localhost:8080/mjdf3
 if [ $name == 'after' ]; then
   # Find missed transmogrifiers
   t=$'\t'; grep "$t[^$t]*mjdf38i3tv0b56vz" $name.link.txt > $name.miss.txt
-  ./parity -b before.miss.txt -a after.miss.txt >links.miss.diff
+  ./parity before.miss.txt after.miss.txt >links.miss.diff
   if [ -s "links.miss.diff" ]; then
     echo '========== Missed Transmogrified Links =========='
     cat links.miss.diff
     mv after.miss.txt before.miss.txt
     cat links.miss.diff | mail -s "thrawler missed transmogrifiers $(hostname -f)" "$emails"
   fi
-  ./parity -b before.link.txt -a after.link.txt > links.diff
+  ./parity before.link.txt after.link.txt > links.diff
   if [ -s "links.diff" ]; then
     echo '========== Differing Links =========='
     cat links.diff
