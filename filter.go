@@ -39,7 +39,7 @@ type LinkContent struct {
 // WARN: No backreferences are available in regexp module;
 //   so suboptimal approach is to treat quotes in reCSSURL
 //   as optional.
-var reCSSURL = regexp.MustCompile(`\burl\(["']?([^"]+)["']?\)`)
+var reCSSURL = regexp.MustCompile(`\burl\(["']?([^"')]+)`)
 var reCSS = regexp.MustCompile(`(?s)(?:/\*.*?\*/)?((?:[^/]|/[^*])*)`)
 var reSRCSET = regexp.MustCompile(`\b(https?://[^ ,]+)`)
 var reFullUrl = regexp.MustCompile(`^https?://`)
