@@ -45,12 +45,15 @@ func (ps *procs) spawnFill(pis []ProcInfo) {
 // the ProcInfo List to try other channels.
 func (ps *procs) fill(pis []ProcInfo) {
 	for len(pis) > 0 {
-		h := fnv.New64()
-		h.Write([]byte(pis[0].String()))
-		i := int(h.Sum64() % uint64(len(ps.chans)))
-		ps.chans[i] <- pis[0]
+		ps.chans[ChannelPicker(pis[0].String(), len(ps.chans))] <- pis[0]
 		pis = pis[1:]
 	}
+}
+
+func ChannelPicker(str string, num int) int {
+	h := fnv.New64()
+	h.Write([]byte(str))
+	return int(h.Sum64() % uint64(num))
 }
 
 func Run(l log.Logger, num int, pis []ProcInfo) {
