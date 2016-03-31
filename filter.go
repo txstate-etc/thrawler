@@ -138,6 +138,9 @@ func StartHtmlFilterLinks(envn int, headers []Header, canon Canon, crawl bool, u
 		if reFullUrl.MatchString(url) {
 			li, err := canon(LinkInfo{}, url)
 			if err == nil {
+				if !crawl {
+					es[ChannelPicker(li.String(), envn)][li.String()] = -1
+				}
 				pis = append(pis, ProcInfo(HtmlFilterLink{LinkInfo: li, Envs: envs}))
 			}
 		}
@@ -253,11 +256,17 @@ func redirectPolicyFunc(_ *http.Request, _ []*http.Request) error {
 //func Request(l log.Logger, i int, e Envs, src string, li LinkInfo, filter func(log.Logger, io.Reader, Envs, LinkInfo, func(LinkInfo, string) (LinkInfo, error)) ([]ProcInfo, error)) []ProcInfo {
 func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 	var pis = []ProcInfo{}
-	method := "GET"
-	if f == EXISTFILTER {
-		method = "HEAD"
+	stat, ok := ls.envs[i][ls.String()]
+	if ok && stat == -1 {
+		if f == EXISTFILTER {
+			f = HTMLFILTER
+		}
 	}
-	if stat, ok := ls.envs[i][ls.String()]; ok {
+	method := "HEAD"
+	if f == HTMLFILTER || f == CSSFILTER {
+		method = "GET"
+	}
+	if ok && stat != -1 {
 		ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", "", "code", stat, "type", method, "net", false)
 		return pis
 	}
@@ -295,7 +304,11 @@ func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 		defer res.Body.Close()
 	}
 
-	ls.envs[i][ls.String()] = res.StatusCode
+	if res.StatusCode == -1 {
+		ls.envs[i][ls.String()] = 0
+	} else {
+		ls.envs[i][ls.String()] = res.StatusCode
+	}
 	if err != nil || res.StatusCode != 200 {
 		// could be redirect error ErrRedirectTtlExceeded
 		// which loging should handle
