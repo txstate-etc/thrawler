@@ -257,16 +257,19 @@ func redirectPolicyFunc(_ *http.Request, _ []*http.Request) error {
 func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 	var pis = []ProcInfo{}
 	stat, ok := ls.envs[i][ls.String()]
-	if ok && stat == -1 {
-		if f == EXISTFILTER {
+	if !ls.crawl { // Non-crawling modified behavior
+		if ok && stat == -1 { // First time handling submitted page; always parse submitted pages.
+			ok = false
 			f = HTMLFILTER
+		} else if f == HTMLFILTER { // Non-submitted page, or previously handled; so do not parse.
+			f = EXISTFILTER
 		}
 	}
 	method := "HEAD"
 	if f == HTMLFILTER || f == CSSFILTER {
 		method = "GET"
 	}
-	if ok && stat != -1 {
+	if ok { // Only log pages that have already been handled
 		ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", "", "code", stat, "type", method, "net", false)
 		return pis
 	}
