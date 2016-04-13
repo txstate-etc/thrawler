@@ -382,8 +382,6 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 			case html.StartTagToken, html.SelfClosingTagToken:
 				tag, moreAttr := ls.htm.TagName()
 				var list []LinkContent
-				var css string
-				var text_css bool
 				if bytes.Equal(tag, []byte("style")) {
 					// <style type="text/css"> ExistOnlyLink
 					text := ls.htm.Text()
@@ -394,6 +392,8 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 				} else if moreAttr {
 					var attr []byte
 					var val []byte
+					var css string
+					var text_css bool
 					for moreAttr {
 						attr, val, moreAttr = ls.htm.TagAttr()
 						switch {
@@ -445,11 +445,11 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 							}
 						}
 					}
-				}
-				if text_css && css != "" {
-					list = append(list, LinkContent{Url: css, Tag: "html/link", Filter: CSSFILTER})
-				} else if css != "" {
-					list = append(list, LinkContent{Url: css, Tag: "html/link", Filter: EXISTFILTER})
+					if text_css && css != "" {
+						list = append(list, LinkContent{Url: css, Tag: "html/link", Filter: CSSFILTER})
+					} else if css != "" {
+						list = append(list, LinkContent{Url: css, Tag: "html/link", Filter: EXISTFILTER})
+					}
 				}
 				for _, lc := range list {
 					li, err := ls.canon(ls.LinkInfo, lc.Url)
@@ -463,11 +463,7 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 						case EXISTFILTER:
 							procs = append(procs, ProcInfo(ExistOnlyLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
 						case HTMLFILTER:
-							if ls.crawl {
-								procs = append(procs, ProcInfo(HtmlFilterLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
-							} else {
-								procs = append(procs, ProcInfo(ExistOnlyLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
-							}
+							procs = append(procs, ProcInfo(HtmlFilterLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
 						case CSSFILTER:
 							procs = append(procs, ProcInfo(CssFilterLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
 						}
