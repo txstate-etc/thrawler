@@ -261,9 +261,12 @@ func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 		if ok && stat == -1 { // First time handling submitted page; always parse submitted pages.
 			ok = false
 			f = HTMLFILTER
-		} else if f == HTMLFILTER { // Non-submitted page, or previously handled; so do not parse.
+		} else if !ok && f == HTMLFILTER { // Non-submitted normally to be parsed pages; do not parse
 			f = EXISTFILTER
 		}
+		// let rest fall through such as:
+		// - Submitted pages that have already been parsed
+		// - Non-submitted pages that normally do not require parsing
 	}
 	method := "HEAD"
 	if f == HTMLFILTER || f == CSSFILTER {
