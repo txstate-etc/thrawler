@@ -9,13 +9,9 @@ if [ "$name" == 'before' ]; then
 elif [ "$name" == 'after' ]; then
   if [ -f "after.miss.txt" ]; then
     mv after.miss.txt before.miss.txt
-  else
-    >before.miss.txt
   fi
   if [ -f "after.link.txt" ]; then
     mv after.link.txt before.link.txt
-  else
-    >before.link.txt
   fi
 else
   echo "USAGE: $0 [before|after]"
