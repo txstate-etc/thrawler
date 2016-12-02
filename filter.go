@@ -375,6 +375,7 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 	// requiring us to retrieve the full page before we can
 	// start parsing.
 	var procs []ProcInfo
+	var locs []string
 	ls.htm = html.NewTokenizer(doc)
 	for {
 		if tokenType := ls.htm.Next(); tokenType == html.ErrorToken {
@@ -386,6 +387,8 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 		} else {
 			switch tokenType {
 			case html.StartTagToken, html.SelfClosingTagToken:
+				var id string
+				var class string
 				tag, moreAttr := ls.htm.TagName()
 				var list []LinkContent
 				if bytes.Equal(tag, []byte("style")) {
@@ -393,7 +396,7 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 					text := ls.htm.Text()
 					links := parseCss(string(text))
 					for _, l := range links {
-						list = append(list, LinkContent{Url: l, Tag: "html/style", Filter: EXISTFILTER})
+						list = append(list, LinkContent{Url: l, Tag: strings.Join(locs, "/") + "/style", Filter: EXISTFILTER})
 					}
 				} else if moreAttr {
 					var attr []byte
@@ -403,6 +406,10 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 					for moreAttr {
 						attr, val, moreAttr = ls.htm.TagAttr()
 						switch {
+						case bytes.Equal(attr, []byte("id")):
+							id = string(val)
+						case bytes.Equal(attr, []byte("class")):
+							class = string(val)
 						case bytes.Equal(attr, []byte("type")):
 							// <link rel="stylesheet" type="text/css" href="theme.css">
 							//   if type="text/css"  -> CssFilterLink
@@ -417,7 +424,7 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 							//   if type="text/css"  -> CssFilterLink
 							//   else -> ExistOnlyLink
 							if bytes.Equal(tag, []byte("a")) {
-								list = append(list, LinkContent{Url: string(val), Tag: "html/a", Filter: HTMLFILTER})
+								list = append(list, LinkContent{Url: string(val), Tag: strings.Join(locs, "/") + "/a(href)", Filter: HTMLFILTER})
 							} else if bytes.Equal(tag, []byte("link")) {
 								css = string(val)
 							}
@@ -426,35 +433,48 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 							// <img src="http://ih.com/b.png" ExistOnlyLink
 							// <script type="text/javascript" src="....js" ExistOnlyLink
 							if bytes.Equal(tag, []byte("iframe")) {
-								list = append(list, LinkContent{Url: string(val), Tag: "html/iframe", Filter: HTMLFILTER})
+								list = append(list, LinkContent{Url: string(val), Tag: strings.Join(locs, "/") + "/iframe", Filter: HTMLFILTER})
 							} else {
-								list = append(list, LinkContent{Url: string(val), Tag: "html/" + string(tag), Filter: EXISTFILTER})
+								list = append(list, LinkContent{Url: string(val), Tag: strings.Join(locs, "/") + "/" + string(tag) + "(src)", Filter: EXISTFILTER})
 							}
 						case bytes.Equal(attr, []byte("srcset")):
 							// <img srcset="http://ih.com/b.png?... 960w, http://ih.com/b.png?... 480w"> ExistOnlyLink
 							if bytes.Equal(tag, []byte("img")) {
 								links := reSRCSET.FindAllStringSubmatch(string(val), -1)
 								for _, link := range links {
-									list = append(list, LinkContent{Url: link[1], Tag: "html/srcset", Filter: EXISTFILTER})
+									list = append(list, LinkContent{Url: link[1], Tag: strings.Join(locs, "/") + "/img(srcset)", Filter: EXISTFILTER})
 								}
 							}
 						case bytes.Equal(attr, []byte("action")):
 							// <form action="submit.htm" method="post"> Skip/Log only
 							if bytes.Equal(tag, []byte("form")) {
-								list = append(list, LinkContent{Url: string(val), Tag: "html/form", Filter: SKIPFILTER})
+								list = append(list, LinkContent{Url: string(val), Tag: strings.Join(locs, "/") + "/form", Filter: SKIPFILTER})
 							}
 						case bytes.Equal(attr, []byte("style")):
 							// a img form iframe ExistOnlyLink
 							links := parseCss(string(val))
 							for _, l := range links {
-								list = append(list, LinkContent{Url: l, Tag: "html/" + string(tag) + "style", Filter: EXISTFILTER})
+								list = append(list, LinkContent{Url: l, Tag: strings.Join(locs, "/") + "/" + string(tag) + "(style)", Filter: EXISTFILTER})
 							}
 						}
 					}
 					if text_css && css != "" {
-						list = append(list, LinkContent{Url: css, Tag: "html/link", Filter: CSSFILTER})
+						list = append(list, LinkContent{Url: css, Tag: strings.Join(locs, "/") + "/link", Filter: CSSFILTER})
 					} else if css != "" {
-						list = append(list, LinkContent{Url: css, Tag: "html/link", Filter: EXISTFILTER})
+						list = append(list, LinkContent{Url: css, Tag: strings.Join(locs, "/") + "/link", Filter: EXISTFILTER})
+					}
+				}
+				if tokenType == html.StartTagToken {
+					if !bytes.Equal(tag, []byte("meta")) && !bytes.Equal(tag, []byte("link")) { // meta and link tags are NOT ALWAYS self closing
+						if id == "" && class == "" {
+							locs = append(locs, string(tag))
+						} else if id == "" {
+							locs = append(locs, string(tag) + "." + strings.TrimSpace(class))
+						} else if class == "" {
+							locs = append(locs, string(tag) + "#" + strings.TrimSpace(id))
+						} else {
+							locs = append(locs, string(tag) + "#" + strings.TrimSpace(id) + "." + strings.TrimSpace(class))
+						}
 					}
 				}
 				for _, lc := range list {
@@ -472,6 +492,34 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 							procs = append(procs, ProcInfo(HtmlFilterLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
 						case CSSFILTER:
 							procs = append(procs, ProcInfo(CssFilterLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
+						}
+					}
+				}
+			case html.EndTagToken:
+				// pop element off the locs (tag#id.class) list
+				tag, _ := ls.htm.TagName()
+				if !bytes.Equal(tag, []byte("meta")) && !bytes.Equal(tag, []byte("link")) {
+					if len(locs) > 0 {
+						var tagstr = string(tag)
+						if strings.HasPrefix(locs[len(locs)-1], tagstr) {
+							locs = locs[:len(locs)-1]
+						} else {
+							var found bool
+							for len(locs) > 0 && (strings.HasPrefix(locs[len(locs)-1], "p") ||
+								strings.HasPrefix(locs[len(locs)-1], "br") ||
+								strings.HasPrefix(locs[len(locs)-1], "hr") ||
+								strings.HasPrefix(locs[len(locs)-1], "img") ||
+								strings.HasPrefix(locs[len(locs)-1], "input")) {
+								locs = locs[:len(locs)-1]
+								if strings.HasPrefix(locs[len(locs)-1], tagstr) {
+									locs = locs[:len(locs)-1]
+									found = true
+									break
+								}
+							}
+							if !found {
+								ls.log.Warn("parsing-error", "src", ls.String(), "tag", tagstr, "loc", strings.Join(locs, "/"))
+							}
 						}
 					}
 				}
@@ -498,7 +546,7 @@ func (ls *Links) FilterCss(body io.Reader) ([]ProcInfo, error) {
 			li.Tag = "css/url"
 			procs = append(procs, ProcInfo(ExistOnlyLink{LinkInfo: li, source: ls.String(), Envs: ls.Envs}))
 		} else {
-			ls.log.Info("request", "source", ls.String(), "tag", "css/url", "url", link, "error", err.Error(), "status", 0, "method", "")
+			ls.log.Info("req", "src", ls.String(), "tag", "css/url", "url", link, "err", err.Error(), "code", 0, "type", "", "net", false)
 		}
 	}
 	return procs, nil
