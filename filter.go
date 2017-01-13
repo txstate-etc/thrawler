@@ -310,7 +310,7 @@ func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 		defer res.Body.Close()
 	}
 
-	if res.StatusCode == -1 {
+	if res == nil || res.StatusCode == -1 {
 		ls.envs[i][ls.String()] = 0
 	} else {
 		ls.envs[i][ls.String()] = res.StatusCode
@@ -318,10 +318,14 @@ func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 	if err != nil || res.StatusCode != 200 {
 		// could be redirect error ErrRedirectTtlExceeded
 		// which loging should handle
+		var statusCode int
+		if res != nil {
+			statusCode = res.StatusCode
+		}
 		if err != nil {
-			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", err.Error(), "code", res.StatusCode, "type", method, "net", true)
+			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", err.Error(), "code", statusCode, "type", method, "net", true)
 		} else {
-			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", "", "code", res.StatusCode, "type", method, "net", true)
+			ls.log.Info("req", "src", ls.source, "tag", ls.Tag, "url", ls.String(), "initial", ls.Initial, "err", "", "code", statusCode, "type", method, "net", true)
 		}
 		return pis
 	}
