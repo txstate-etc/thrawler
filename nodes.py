@@ -17,8 +17,9 @@ def nodes(d):
     if k == "path":
       print(v.replace("/"+args.site,args.domain))
     elif k == "nodes":
-      for n in v:
-        nodes(n)
+      if v is not None:
+        for n in v:
+          nodes(n)
 
 for line in sys.stdin:
   nodes(json.loads(line))
