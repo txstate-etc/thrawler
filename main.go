@@ -185,3 +185,24 @@ func main() {
 	}
 	Run(mainlog, threads, StartHtmlFilterLinks(threads, headers, canon, crawl, sites))
 }
+
+// Client Timeouts in Go:
+// (Dial)(TLS handshake)(Request)(Response Headers)(Response Body)(Idle)(New Request)
+// [-------------------- http.Client.Timeout --------------------]
+// Timeouts via client
+//c := &http.Client{
+//    Timeout: 15 * time.Second,
+//}
+//resp, err := c.Get("https://blog.filippo.io/")
+
+// Cancel via contexts (Go 1.7):
+//ctx, cancel := context.WithCancel(context.TODO())
+//timer := time.AfterFunc(5*time.Second, func() {
+//    cancel()
+//})
+//
+//req, err := http.NewRequest("GET", "http://httpbin.org/range/2048?duration=8&chunk_size=256", nil)
+//if err != nil {
+//    log.Fatal(err)
+//}
+//req = req.WithContext(ctx)
