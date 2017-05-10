@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type FilterType int
@@ -301,6 +302,7 @@ func (ls *Links) Request(i int, f FilterType) []ProcInfo {
 		}
 	}
 	client := &http.Client{
+		Timeout:       time.Duration(180 * time.Second),
 		CheckRedirect: redirectPolicyFunc,
 		Transport:     tr,
 	}
@@ -473,11 +475,11 @@ func (ls *Links) FilterHtml(doc io.Reader) ([]ProcInfo, error) {
 						if id == "" && class == "" {
 							locs = append(locs, string(tag))
 						} else if id == "" {
-							locs = append(locs, string(tag) + "." + strings.TrimSpace(class))
+							locs = append(locs, string(tag)+"."+strings.TrimSpace(class))
 						} else if class == "" {
-							locs = append(locs, string(tag) + "#" + strings.TrimSpace(id))
+							locs = append(locs, string(tag)+"#"+strings.TrimSpace(id))
 						} else {
-							locs = append(locs, string(tag) + "#" + strings.TrimSpace(id) + "." + strings.TrimSpace(class))
+							locs = append(locs, string(tag)+"#"+strings.TrimSpace(id)+"."+strings.TrimSpace(class))
 						}
 					}
 				}
